@@ -10,7 +10,7 @@ package io.github.darkkronicle.advancedchatbox.suggester.gui;
 import fi.dy.masa.malilib.gui.interfaces.ISelectionListener;
 import io.github.darkkronicle.advancedchatbox.suggester.ShortcutSuggestor;
 import io.github.darkkronicle.advancedchatcore.gui.WidgetConfigList;
-import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screens.Screen;
 
 import javax.annotation.Nullable;
 import java.util.Collection;

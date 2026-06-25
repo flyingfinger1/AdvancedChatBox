@@ -17,8 +17,8 @@ import io.github.darkkronicle.advancedchatcore.util.SearchUtils;
 import io.github.darkkronicle.advancedchatcore.util.StringMatch;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.network.PlayerListEntry;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.multiplayer.PlayerInfo;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -42,16 +42,16 @@ public class PlayerSuggestor implements IMessageSuggestor {
     private Collection<String> getPlayerNames() {
         List<String> list = new ArrayList<>();
 
-        for (PlayerListEntry playerListEntry : MinecraftClient.getInstance().player.networkHandler.getPlayerList()) {
+        for (PlayerInfo playerListEntry : Minecraft.getInstance().getConnection().getOnlinePlayers()) {
 
             //checking if player name is empty, to avoid fake players
-            if (playerListEntry.getProfile().getName().equals("")) continue;
+            if (playerListEntry.getProfile().name().equals("")) continue;
 
             if (ChatBoxConfigStorage.General.PRUNE_PLAYER_SUGGESTIONS.config.getBooleanValue()
-                    && playerListEntry.getDisplayName() != null) {
+                    && playerListEntry.getTabListDisplayName() != null) {
                 // Try to get their actual name (without prefix)
                 StringMatch match = SearchUtils
-                        .getMatch(playerListEntry.getDisplayName().getString(),
+                        .getMatch(playerListEntry.getTabListDisplayName().getString(),
                                 ConfigStorage.General.MESSAGE_OWNER_REGEX.config.getStringValue(), FindType.REGEX)
                         .orElse(null);
                 if (match != null) {
@@ -61,14 +61,14 @@ public class PlayerSuggestor implements IMessageSuggestor {
                     }
                 } else {
                     // Check to make sure it isn't blank
-                    if (!playerListEntry.getDisplayName().getString().equals("")) {
-                        list.add(playerListEntry.getDisplayName().getString());
+                    if (!playerListEntry.getTabListDisplayName().getString().equals("")) {
+                        list.add(playerListEntry.getTabListDisplayName().getString());
                     }
                 }
             } else {
                 // Player name is never null. But on servers it can be populated with
                 // fake players.
-                list.add(playerListEntry.getProfile().getName());
+                list.add(playerListEntry.getProfile().name());
             }
         }
 

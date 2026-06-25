@@ -14,8 +14,8 @@ import io.github.darkkronicle.advancedchatcore.util.RawText;
 import lombok.Getter;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
 
 import javax.annotation.Nonnull;
 
@@ -26,7 +26,7 @@ import javax.annotation.Nonnull;
 public class AdvancedSuggestion extends Suggestion {
     @Nonnull
     @Getter
-    private final Text render;
+    private final Component render;
 
     /**
      * @param range   Range from the original string where it is recommending
@@ -34,7 +34,7 @@ public class AdvancedSuggestion extends Suggestion {
      * @param render  How the suggestion will render
      * @param tooltip Message to show up on hover
      */
-    public AdvancedSuggestion(StringRange range, String text, Text render, Message tooltip) {
+    public AdvancedSuggestion(StringRange range, String text, Component render, Message tooltip) {
         super(range, text, tooltip);
         if (render == null) {
             this.render = new RawText(text, Style.EMPTY);

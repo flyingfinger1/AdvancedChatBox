@@ -12,11 +12,11 @@ import io.github.darkkronicle.advancedchatbox.interfaces.IMessageFormatter;
 import io.github.darkkronicle.advancedchatcore.util.*;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.network.ClientCommandSource;
-import net.minecraft.text.MutableText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.util.Formatting;
+import net.minecraft.client.multiplayer.ClientSuggestionProvider;
+import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
+import net.minecraft.ChatFormatting;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Optional;
@@ -25,7 +25,7 @@ import java.util.Optional;
 public class ColorCodeFormatter implements IMessageFormatter {
 
     @Override
-    public Optional<Text> format(Text text, @Nullable ParseResults<ClientCommandSource> parse) {
+    public Optional<Component> format(Component text, @Nullable ParseResults<ClientSuggestionProvider> parse) {
         if (parse != null) {
             return Optional.empty();
         }
@@ -41,14 +41,14 @@ public class ColorCodeFormatter implements IMessageFormatter {
         Style last = Style.EMPTY;
         TextBuilder formatted = new TextBuilder();
         for (StringMatch match : search.getMatches()) {
-            formatted.append(TextUtil.truncate(text, new StringMatch("", index, match.start)).fillStyle(last));
-            Formatting format = Formatting.byCode(match.match.charAt(1));
-            last = last.withFormatting(format);
+            formatted.append(TextUtil.truncate(text, new StringMatch("", index, match.start)).withStyle(last));
+            ChatFormatting format = ChatFormatting.getByCode(match.match.charAt(1));
+            last = last.applyFormat(format);
             index = match.start;
         }
-        MutableText small = TextUtil.truncate(text, new StringMatch("", index, string.length()));
+        MutableComponent small = TextUtil.truncate(text, new StringMatch("", index, string.length()));
         if (!small.getString().isEmpty()) {
-            formatted.append(small.fillStyle(last));
+            formatted.append(small.withStyle(last));
         }
         return Optional.of(formatted.build());
     }

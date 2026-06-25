@@ -12,8 +12,8 @@ import io.github.darkkronicle.advancedchatcore.chat.AdvancedChatScreen;
 import io.github.darkkronicle.advancedchatcore.interfaces.AdvancedChatScreenSection;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
 
 @Environment(EnvType.CLIENT)
 public class ChatBoxSection extends AdvancedChatScreenSection {
@@ -35,7 +35,7 @@ public class ChatBoxSection extends AdvancedChatScreenSection {
     }
 
     @Override
-    public void render(DrawContext context, int mouseX, int mouseY, float deltaTicks) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY, float deltaTicks) {
         this.suggestor.render(context, mouseX, mouseY);
     }
 
@@ -61,9 +61,9 @@ public class ChatBoxSection extends AdvancedChatScreenSection {
 
     @Override
     public void initGui() {
-        MinecraftClient client = MinecraftClient.getInstance();
+        Minecraft client = Minecraft.getInstance();
         AdvancedChatScreen screen = getScreen();
-        this.suggestor = new ChatSuggestorGui(client, screen, screen.getChatField(), client.textRenderer, false, false,
+        this.suggestor = new ChatSuggestorGui(client, screen, screen.getChatField(), client.font, false, false,
                 1, ChatBoxConfigStorage.General.SUGGESTION_SIZE.config.getIntegerValue(), true);
         this.suggestor.refresh();
     }

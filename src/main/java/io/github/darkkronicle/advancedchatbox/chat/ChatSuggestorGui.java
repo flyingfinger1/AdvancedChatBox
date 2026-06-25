@@ -18,28 +18,30 @@ import com.mojang.brigadier.exceptions.CommandSyntaxException;
 import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
+import com.mojang.blaze3d.platform.InputConstants;
 import fi.dy.masa.malilib.util.KeyCodes;
 import io.github.darkkronicle.advancedchatbox.config.ChatBoxConfigStorage;
+import io.github.darkkronicle.advancedchatcore.chat.AdvancedTextField;
 import io.github.darkkronicle.advancedchatcore.util.Colors;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.network.ClientCommandSource;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
-import net.minecraft.client.resource.language.I18n;
-import net.minecraft.client.util.math.Rect2i;
-import net.minecraft.server.command.CommandManager;
-import net.minecraft.text.OrderedText;
-import net.minecraft.text.Style;
-import net.minecraft.text.Text;
-import net.minecraft.text.Texts;
-import net.minecraft.util.Formatting;
-import net.minecraft.util.math.MathHelper;
-import net.minecraft.util.math.Vec2f;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.gui.Font;
+import net.minecraft.client.gui.GuiGraphicsExtractor;
+import net.minecraft.client.gui.screens.Screen;
+import net.minecraft.client.multiplayer.ClientSuggestionProvider;
+import net.minecraft.client.multiplayer.ClientPacketListener;
+import net.minecraft.client.resources.language.I18n;
+import net.minecraft.client.renderer.Rect2i;
+import net.minecraft.commands.Commands;
+import net.minecraft.util.FormattedCharSequence;
+import net.minecraft.network.chat.Style;
+import net.minecraft.network.chat.Component;
+import net.minecraft.network.chat.ComponentUtils;
+import net.minecraft.ChatFormatting;
+import net.minecraft.util.Mth;
+import net.minecraft.world.phys.Vec2;
+import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -48,16 +50,16 @@ import java.util.Map;
 
 @Environment(EnvType.CLIENT)
 public class ChatSuggestorGui {
-    private final MinecraftClient client;
+    private final Minecraft client;
     private final Screen owner;
-    private final TextFieldWidget textField;
-    private final TextRenderer textRenderer;
+    private final AdvancedTextField textField;
+    private final Font textRenderer;
     private final boolean slashOptional;
     private final boolean suggestingWhenEmpty;
     private final int inWindowIndexOffset;
     private final int maxSuggestionSize;
     private final boolean chatScreenSized;
-    private final List<OrderedText> messages = Lists.newArrayList();
+    private final List<FormattedCharSequence> messages = Lists.newArrayList();
     private int x;
     private int width;
     private SuggestionWindow window;
@@ -68,7 +70,7 @@ public class ChatSuggestorGui {
     private final ChatFormatter formatter;
     private final ChatSuggestor suggestor;
 
-    public ChatSuggestorGui(MinecraftClient client, Screen owner, TextFieldWidget textField, TextRenderer textRenderer,
+    public ChatSuggestorGui(Minecraft client, Screen owner, AdvancedTextField textField, Font textRenderer,
                             boolean slashRequired, boolean suggestingWhenEmpty, int inWindowIndexOffset, int maxSuggestionSize,
                             boolean chatScreenSized) {
         this.client = client;
@@ -104,7 +106,7 @@ public class ChatSuggestorGui {
     }
 
     public boolean mouseScrolled(double amount) {
-        return (this.window != null && this.window.mouseScrolled(MathHelper.clamp(amount, -1.0D, 1.0D)));
+        return (this.window != null && this.window.mouseScrolled(Mth.clamp(amount, -1.0D, 1.0D)));
     }
 
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
@@ -122,17 +124,17 @@ public class ChatSuggestorGui {
         int width = 0;
         for (AdvancedSuggestion value : suggestions) {
             // Have suggestion be as wide as the biggest
-            width = Math.max(width, this.textRenderer.getWidth(value.getRender()));
+            width = Math.max(width, this.textRenderer.width(value.getRender()));
         }
 
-        int x = MathHelper.clamp(this.textField.getCharacterX(suggestor.getRange().getStart()), 0,
-                this.textField.getCharacterX(0) + this.textField.getInnerWidth() - width);
+        int x = Mth.clamp(this.textField.getScreenX(suggestor.getRange().getStart()), 0,
+                this.textField.getScreenX(0) + this.textField.getInnerWidth() - width);
         int y = this.chatScreenSized ? this.owner.height - 12 : 72;
         this.window = new SuggestionWindow(x, y, width, suggestions, narrateFirstSuggestion);
     }
 
     public void refresh() {
-        String currentText = this.textField.getText();
+        String currentText = this.textField.getValue();
         if (this.suggestor.getParse() != null
                 && !this.suggestor.getParse().getReader().getString().equals(currentText)) {
             // Set it to null to signify that if it is still a command, to parse it
@@ -153,7 +155,7 @@ public class ChatSuggestorGui {
 
         boolean suggestCommand = this.slashOptional || command;
         if (suggestCommand) {
-            int cursorIndex = this.textField.getCursor();
+            int cursorIndex = this.textField.getCursorPosition();
             this.suggestor.updateParse(stringReader);
             // Index 1 will enforce that the player typed at LEAST ONE character
             if ((this.suggestingWhenEmpty || cursorIndex >= stringReader.getCursor())
@@ -169,20 +171,20 @@ public class ChatSuggestorGui {
         }
     }
 
-    private static OrderedText formatException(CommandSyntaxException exception) {
-        Text text = Texts.toText(exception.getRawMessage());
+    private static FormattedCharSequence formatException(CommandSyntaxException exception) {
+        Component text = ComponentUtils.fromMessage(exception.getRawMessage());
         String string = exception.getContext();
-        return string == null ? text.asOrderedText()
-                : (Text.translatable("command.context.parse_error", text, exception.getCursor(), string))
-                .asOrderedText();
+        return string == null ? text.getVisualOrderText()
+                : (Component.translatable("command.context.parse_error", text, exception.getCursor(), string))
+                .getVisualOrderText();
     }
 
     private void showIfActive() {
-        if (this.textField.getCursor() == this.textField.getText().length()) {
+        if (this.textField.getCursorPosition() == this.textField.getValue().length()) {
             if (this.suggestor.getSuggestions().isEmpty() && !this.suggestor.getParse().getExceptions().isEmpty()) {
                 int builtInExceptions = 0;
 
-                for (Map.Entry<CommandNode<ClientCommandSource>, CommandSyntaxException> commandNodeCommandSyntaxExceptionEntry : this.suggestor
+                for (Map.Entry<CommandNode<ClientSuggestionProvider>, CommandSyntaxException> commandNodeCommandSyntaxExceptionEntry : this.suggestor
                         .getParse().getExceptions().entrySet()) {
                     CommandSyntaxException commandSyntaxException = commandNodeCommandSyntaxExceptionEntry.getValue();
                     if (commandSyntaxException.getType() == CommandSyntaxException.BUILT_IN_EXCEPTIONS
@@ -198,13 +200,13 @@ public class ChatSuggestorGui {
                             CommandSyntaxException.BUILT_IN_EXCEPTIONS.dispatcherUnknownCommand().create()));
                 }
             } else if (this.suggestor.getParse().getReader().canRead()) {
-                this.messages.add(formatException(CommandManager.getException(this.suggestor.getParse())));
+                this.messages.add(formatException(Commands.getParseException(this.suggestor.getParse())));
             }
         }
         this.x = 0;
         this.width = this.owner.width;
         if (this.messages.isEmpty()) {
-            this.showUsages(Formatting.GRAY);
+            this.showUsages(ChatFormatting.GRAY);
         }
         this.window = null;
         if (this.windowActive) {
@@ -212,33 +214,33 @@ public class ChatSuggestorGui {
         }
     }
 
-    private void showUsages(Formatting formatting) {
-        CommandContextBuilder<ClientCommandSource> commandContextBuilder = this.suggestor.getParse().getContext();
-        SuggestionContext<ClientCommandSource> suggestionContext =
-                commandContextBuilder.findSuggestionContext(this.textField.getCursor());
-        ClientPlayNetworkHandler networkHandler = this.client.getNetworkHandler();
-        CommandDispatcher<ClientCommandSource> commandDispatcher = networkHandler.getCommandDispatcher();
-        Map<CommandNode<ClientCommandSource>, String> map = commandDispatcher.getSmartUsage(suggestionContext.parent, this.client.player.networkHandler.getCommandSource());
-        List<OrderedText> list = new ArrayList<>();
+    private void showUsages(ChatFormatting formatting) {
+        CommandContextBuilder<ClientSuggestionProvider> commandContextBuilder = this.suggestor.getParse().getContext();
+        SuggestionContext<ClientSuggestionProvider> suggestionContext =
+                commandContextBuilder.findSuggestionContext(this.textField.getCursorPosition());
+        ClientPacketListener networkHandler = this.client.getConnection();
+        CommandDispatcher<ClientSuggestionProvider> commandDispatcher = networkHandler.getCommands();
+        Map<CommandNode<ClientSuggestionProvider>, String> map = commandDispatcher.getSmartUsage(suggestionContext.parent, this.client.player.connection.getSuggestionsProvider());
+        List<FormattedCharSequence> list = new ArrayList<>();
         int i = 0;
         Style style = Style.EMPTY.withColor(formatting);
 
-        for (Map.Entry<CommandNode<ClientCommandSource>, String> commandNodeStringEntry : map.entrySet()) {
+        for (Map.Entry<CommandNode<ClientSuggestionProvider>, String> commandNodeStringEntry : map.entrySet()) {
             if (!(commandNodeStringEntry.getKey() instanceof LiteralCommandNode)) {
-                list.add(OrderedText.styledForwardsVisitedString(commandNodeStringEntry.getValue(), style));
-                i = Math.max(i, this.textRenderer.getWidth(commandNodeStringEntry.getValue()));
+                list.add(FormattedCharSequence.forward(commandNodeStringEntry.getValue(), style));
+                i = Math.max(i, this.textRenderer.width(commandNodeStringEntry.getValue()));
             }
         }
 
         if (!list.isEmpty()) {
             this.messages.addAll(list);
-            this.x = MathHelper.clamp(this.textField.getCharacterX(suggestionContext.startPos), 0,
-                    this.textField.getCharacterX(0) + this.textField.getInnerWidth() - i);
+            this.x = Mth.clamp(this.textField.getScreenX(suggestionContext.startPos), 0,
+                    this.textField.getScreenX(0) + this.textField.getInnerWidth() - i);
             this.width = i;
         }
     }
 
-    private OrderedText provideRenderText(String original, int firstCharacterIndex) {
+    private FormattedCharSequence provideRenderText(String original, int firstCharacterIndex) {
         return this.formatter.apply(original, firstCharacterIndex);
     }
 
@@ -247,19 +249,19 @@ public class ChatSuggestorGui {
         return suggestion.startsWith(original) ? suggestion.substring(original.length()) : null;
     }
 
-    public void render(DrawContext context, int mouseX, int mouseY) {
+    public void render(GuiGraphicsExtractor context, int mouseX, int mouseY) {
         if (this.window != null) {
             this.window.render(context, mouseX, mouseY);
         } else {
             int i = 0;
 
-            for (OrderedText message : this.messages) {
+            for (FormattedCharSequence message : this.messages) {
                 i++;
                 int j = this.chatScreenSized ? this.owner.height - 14 - 13 - 12 * i : 72 + 12 * i;
                 context.fill(this.x - 1, j, this.x + this.width + 1, j + 12,
                         ChatBoxConfigStorage.General.BACKGROUND_COLOR.config.get().color());
                 if (message != null) {
-                    context.drawTextWithShadow(textRenderer, message, this.x, j + 2, -1);
+                    context.text(textRenderer, message, this.x, j + 2, -1, true);
                 }
             }
         }
@@ -276,33 +278,33 @@ public class ChatSuggestorGui {
         private final List<AdvancedSuggestion> suggestions;
         private int inWindowIndex;
         private int selection;
-        private Vec2f mouse;
+        private Vec2 mouse;
         private boolean completed;
         private int lastNarrationIndex;
 
         private SuggestionWindow(int x, int y, int width, List<AdvancedSuggestion> list,
                                  boolean narrateFirstSuggestion) {
-            this.mouse = Vec2f.ZERO;
+            this.mouse = Vec2.ZERO;
             int renderX = x - 1;
             int renderY = ChatSuggestorGui.this.chatScreenSized
                     ? y - 3 - Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 12
                     : y;
             this.area = new Rect2i(renderX, renderY, width + 1,
                     Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 12);
-            this.typedText = ChatSuggestorGui.this.textField.getText();
+            this.typedText = ChatSuggestorGui.this.textField.getValue();
             this.lastNarrationIndex = narrateFirstSuggestion ? -1 : 0;
             this.suggestions = list;
             this.select(0);
         }
 
-        public void render(DrawContext context, int mouseX, int mouseY) {
+        public void render(GuiGraphicsExtractor context, int mouseX, int mouseY) {
             int suggestionSize = Math.min(this.suggestions.size(), ChatSuggestorGui.this.maxSuggestionSize);
             boolean moreBelow = this.inWindowIndex > 0;
             boolean moreAbove = this.suggestions.size() > this.inWindowIndex + suggestionSize;
             boolean more = moreBelow || moreAbove;
             boolean updateMouse = this.mouse.x != (float) mouseX || this.mouse.y != (float) mouseY;
             if (updateMouse) {
-                this.mouse = new Vec2f((float) mouseX, (float) mouseY);
+                this.mouse = new Vec2((float) mouseX, (float) mouseY);
             }
 
             if (more) {
@@ -354,17 +356,18 @@ public class ChatSuggestorGui {
                     hover = true;
                 }
 
-                context.drawTextWithShadow(textRenderer, suggestion.getRender(),
+                context.text(textRenderer, suggestion.getRender(),
                         this.area.getX() + 1, this.area.getY() + 2 + 12 * s,
                         (s + this.inWindowIndex) == this.selection
                                 ? ChatBoxConfigStorage.General.HIGHLIGHT_COLOR.config.get().color()
-                                : ChatBoxConfigStorage.General.UNHIGHLIGHT_COLOR.config.get().color());
+                                : ChatBoxConfigStorage.General.UNHIGHLIGHT_COLOR.config.get().color(),
+                        true);
             }
 
             if (hover) {
                 Message message = this.suggestions.get(this.selection).getTooltip();
                 if (message != null) {
-                    context.drawTooltip(Texts.toText(message), mouseX, mouseY);
+                    context.setTooltipForNextFrame(textRenderer, ComponentUtils.fromMessage(message), mouseX, mouseY);
                 }
             }
         }
@@ -383,14 +386,14 @@ public class ChatSuggestorGui {
         }
 
         public boolean mouseScrolled(double amount) {
-            int x = (int) (ChatSuggestorGui.this.client.mouse.getX()
-                    * (double) ChatSuggestorGui.this.client.getWindow().getScaledWidth()
+            int x = (int) (ChatSuggestorGui.this.client.mouseHandler.xpos()
+                    * (double) ChatSuggestorGui.this.client.getWindow().getGuiScaledWidth()
                     / (double) ChatSuggestorGui.this.client.getWindow().getWidth());
-            int y = (int) (ChatSuggestorGui.this.client.mouse.getY()
-                    * (double) ChatSuggestorGui.this.client.getWindow().getScaledHeight()
+            int y = (int) (ChatSuggestorGui.this.client.mouseHandler.ypos()
+                    * (double) ChatSuggestorGui.this.client.getWindow().getGuiScaledHeight()
                     / (double) ChatSuggestorGui.this.client.getWindow().getHeight());
             if (this.area.contains(x, y)) {
-                this.inWindowIndex = MathHelper.clamp((int) ((double) this.inWindowIndex - amount), 0,
+                this.inWindowIndex = Mth.clamp((int) ((double) this.inWindowIndex - amount), 0,
                         Math.max(this.suggestions.size() - ChatSuggestorGui.this.maxSuggestionSize, 0));
                 return true;
             }
@@ -410,7 +413,11 @@ public class ChatSuggestorGui {
             }
             if (keyCode == KeyCodes.KEY_TAB) {
                 if (this.completed) {
-                    this.scroll(Screen.hasShiftDown() ? -1 : 1);
+                    boolean shift = InputConstants.isKeyDown(
+                                    ChatSuggestorGui.this.client.getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
+                            || InputConstants.isKeyDown(
+                                    ChatSuggestorGui.this.client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
+                    this.scroll(shift ? -1 : 1);
                 }
 
                 this.complete();
@@ -429,10 +436,10 @@ public class ChatSuggestorGui {
             int maxInWindow = this.inWindowIndex + ChatSuggestorGui.this.maxSuggestionSize - 1;
             // Moving window logic
             if (this.selection < windowIndex) {
-                this.inWindowIndex = MathHelper.clamp(this.selection, 0,
+                this.inWindowIndex = Mth.clamp(this.selection, 0,
                         Math.max(this.suggestions.size() - ChatSuggestorGui.this.maxSuggestionSize, 0));
             } else if (this.selection > maxInWindow) {
-                this.inWindowIndex = MathHelper.clamp(
+                this.inWindowIndex = Mth.clamp(
                         this.selection + ChatSuggestorGui.this.inWindowIndexOffset
                                 - ChatSuggestorGui.this.maxSuggestionSize,
                         0, Math.max(this.suggestions.size() - ChatSuggestorGui.this.maxSuggestionSize, 0));
@@ -453,11 +460,11 @@ public class ChatSuggestorGui {
 
             Suggestion suggestion = this.suggestions.get(this.selection);
             ChatSuggestorGui.this.textField.setSuggestion(ChatSuggestorGui
-                    .getSuggestionSuffix(ChatSuggestorGui.this.textField.getText(), suggestion.apply(this.typedText)));
-            if (client.getNarratorManager().isActive() && this.lastNarrationIndex != this.selection) {
+                    .getSuggestionSuffix(ChatSuggestorGui.this.textField.getValue(), suggestion.apply(this.typedText)));
+            if (client.getNarrator().isActive() && this.lastNarrationIndex != this.selection) {
                 LiteralMessage message = new LiteralMessage(this.getNarration());
-                Text text = Texts.toText(message);
-                client.getNarratorManager().narrate(text);
+                Component text = ComponentUtils.fromMessage(message);
+                client.getNarrator().saySystemNow(text);
             }
         }
 
@@ -466,8 +473,8 @@ public class ChatSuggestorGui {
             ChatSuggestorGui.this.completingSuggestions = true;
             ChatSuggestorGui.this.textField.setText(suggestion.apply(this.typedText));
             int i = suggestion.getRange().getStart() + suggestion.getText().length();
-            ChatSuggestorGui.this.textField.setSelectionStart(i);
-            ChatSuggestorGui.this.textField.setSelectionEnd(i);
+            ChatSuggestorGui.this.textField.setCursorPosition(i);
+            ChatSuggestorGui.this.textField.setHighlightPos(i);
             this.select(this.selection);
             ChatSuggestorGui.this.completingSuggestions = false;
             this.completed = true;
@@ -478,9 +485,9 @@ public class ChatSuggestorGui {
             Suggestion suggestion = this.suggestions.get(this.selection);
             Message message = suggestion.getTooltip();
             return message != null
-                    ? I18n.translate("narration.suggestion.tooltip", this.selection + 1, this.suggestions.size(),
+                    ? I18n.get("narration.suggestion.tooltip", this.selection + 1, this.suggestions.size(),
                     suggestion.getText(), message.getString())
-                    : I18n.translate("narration.suggestion", this.selection + 1, this.suggestions.size(),
+                    : I18n.get("narration.suggestion", this.selection + 1, this.suggestions.size(),
                     suggestion.getText());
         }
 

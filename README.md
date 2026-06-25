@@ -1,16 +1,31 @@
-# Important
-
-I have no real interest in mod development at the moment, so I am archiving this. Feel free to fork, and consider some of the community forks/
-
 # AdvancedChatBox
 
 AdvancedChatBox allows for complex suggestions and tab completion to be added into the Minecraft chat box.
 
-Please submit bugs to the [issue tracker](https://github.com/DarkKronicle/AdvancedChatBox/issues).
+> **Refurbished fork.** DarkKronicle archived the original project. This fork brings AdvancedChatBox
+> up to **Minecraft 26.2** and modernises the codebase: the whole mod was ported from Yarn to the new
+> Mojang names and the 26.x GUI render-state model, and the LanguageTool spell-checker was made
+> robust on Java 25 (graceful degradation + JAXP/dependency fixes). It is a module of, and builds
+> against, the refurbished
+> [AdvancedChatCore](https://github.com/flyingfinger1/AdvancedChatCore).
+
+## Requirements
+
+| | Version |
+| --- | --- |
+| Minecraft | **26.2** |
+| Java | **25** (required by Minecraft 26.x) |
+| Fabric Loader | 0.19.0+ |
 
 ## Dependencies
 
-[AdvancedChatCore](https://github.com/DarkKronicle/AdvancedChatCore) is required to run the mod.
+The following are **required** for this mod to run:
+
+- [AdvancedChatCore](https://github.com/flyingfinger1/AdvancedChatCore) **1.6.0+** (this fork's build)
+- [MaLiLib](https://modrinth.com/mod/malilib) — for 26.x use the sakura-ryoko builds
+- [Fabric API](https://modrinth.com/mod/fabric-api)
+
+[Mod Menu](https://modrinth.com/mod/modmenu) is recommended to open the configuration screen.
 
 ## Features
 
@@ -23,14 +38,30 @@ Please submit bugs to the [issue tracker](https://github.com/DarkKronicle/Advanc
 - Built-in JSON linter for commands
 - Legacy color code formatting when typing messages
 
+## Building
+
+The build needs a **JDK 25** toolchain (Minecraft 26.x). AdvancedChatBox depends on the refurbished
+AdvancedChatCore, which it resolves from your local Maven repository. Publish Core locally first:
+
+```
+# in the AdvancedChatCore clone
+./gradlew publishToMavenLocal      # publishes io.github.darkkronicle:AdvancedChatCore:1.6.0
+
+# then in AdvancedChatBox
+./gradlew build
+```
+
+The output jar in `build/libs/` bundles LanguageTool and its dependencies (jar-in-jar), so it is
+large (~20 MB). To run the mod, install it together with AdvancedChatCore, MaLiLib and Fabric API.
+
 ## Development
 
-To develop, all dependencies should automatically be processed through gradle. To ensure code consistency the hook pre-commit.sh can be used. To install the pre-commit hook run:
+To ensure code consistency the hook `pre-commit.sh` can be used. To install it run:
 
 `ln -s ../../pre-commit.sh .git/hooks/pre-commit`
 
 ## Credits n' more
 
-Code & Mastermind: DarkKronicle
-
-Language & Proofreading: Chronos22
+- Code & Mastermind: DarkKronicle
+- Language & Proofreading: Chronos22
+- 26.2 port & modernisation: community fork
