@@ -26,8 +26,6 @@ import io.github.darkkronicle.advancedchatcore.chat.ChatScreenSectionHolder;
 import io.github.darkkronicle.advancedchatcore.config.gui.GuiConfigHandler;
 import net.fabricmc.api.EnvType;
 import net.fabricmc.api.Environment;
-import org.apache.logging.log4j.Level;
-import org.apache.logging.log4j.LogManager;
 
 @Environment(EnvType.CLIENT)
 public class ChatBoxInitHandler implements IInitializationHandler {
@@ -73,7 +71,7 @@ public class ChatBoxInitHandler implements IInitializationHandler {
             // Catch Throwable, not Exception: LanguageTool can fail with a NoClassDefFoundError
             // (missing transitive lib) or other Errors, which must not crash the whole game — the
             // spell-check suggestor is optional and simply stays unregistered if it can't load.
-            LogManager.getLogger().log(Level.ERROR, "[AdvancedChat] {}", "Couldn't load SpellCheckSuggestor", e);
+            AdvancedChatBox.LOGGER.error("Couldn't load SpellCheckSuggestor", e);
         }
 
         AdvancedChatCore.CREATE_SUGGESTOR = false;

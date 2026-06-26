@@ -8,6 +8,7 @@
 package io.github.darkkronicle.advancedchatbox.suggester;
 
 import com.mojang.brigadier.context.StringRange;
+import io.github.darkkronicle.advancedchatbox.AdvancedChatBox;
 import io.github.darkkronicle.advancedchatbox.chat.AdvancedSuggestion;
 import io.github.darkkronicle.advancedchatbox.chat.AdvancedSuggestions;
 import io.github.darkkronicle.advancedchatbox.config.ChatBoxConfigStorage;
@@ -56,7 +57,7 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
             // Set it up. Make it so it doesn't freeze later.
             lt.check("a");
         } catch (IOException e) {
-            e.printStackTrace();
+            AdvancedChatBox.LOGGER.error("Failed to warm up the spell-check suggestor", e);
         }
     }
 
@@ -72,7 +73,7 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
                 suggestions.add(new AdvancedSuggestions(range, convertSuggestions(match, range)));
             }
         } catch (Exception e) {
-            e.printStackTrace();
+            AdvancedChatBox.LOGGER.error("Failed to run spell check on text", e);
             return Optional.empty();
         }
         return Optional.of(suggestions);
