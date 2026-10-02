@@ -19,7 +19,7 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.blaze3d.platform.InputConstants;
-import fi.dy.masa.malilib.util.KeyCodes;
+import fi.dy.masa.malilib.util.input.KeyCodes;
 import io.github.darkkronicle.advancedchatbox.config.ChatBoxConfigStorage;
 import io.github.darkkronicle.advancedchatcore.chat.AdvancedTextField;
 import io.github.darkkronicle.advancedchatcore.util.Colors;
@@ -41,7 +41,6 @@ import net.minecraft.network.chat.ComponentUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.util.Mth;
 import net.minecraft.world.phys.Vec2;
-import org.lwjgl.glfw.GLFW;
 
 import javax.annotation.Nullable;
 import java.util.ArrayList;
@@ -413,10 +412,8 @@ public class ChatSuggestorGui {
             }
             if (keyCode == KeyCodes.KEY_TAB) {
                 if (this.completed) {
-                    boolean shift = InputConstants.isKeyDown(
-                                    ChatSuggestorGui.this.client.getWindow(), GLFW.GLFW_KEY_LEFT_SHIFT)
-                            || InputConstants.isKeyDown(
-                                    ChatSuggestorGui.this.client.getWindow(), GLFW.GLFW_KEY_RIGHT_SHIFT);
+                    boolean shift = InputConstants.isKeyDown(KeyCodes.KEY_LEFT_SHIFT)
+                            || InputConstants.isKeyDown(KeyCodes.KEY_RIGHT_SHIFT);
                     this.scroll(shift ? -1 : 1);
                 }
 
