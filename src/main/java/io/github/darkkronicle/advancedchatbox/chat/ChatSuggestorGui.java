@@ -19,7 +19,6 @@ import com.mojang.brigadier.suggestion.Suggestion;
 import com.mojang.brigadier.tree.CommandNode;
 import com.mojang.brigadier.tree.LiteralCommandNode;
 import com.mojang.blaze3d.platform.InputConstants;
-import fi.dy.masa.malilib.util.input.KeyCodes;
 import io.github.darkkronicle.advancedchatbox.config.ChatBoxConfigStorage;
 import io.github.darkkronicle.advancedchatcore.chat.AdvancedTextField;
 import io.github.darkkronicle.advancedchatcore.util.Colors;
@@ -97,7 +96,7 @@ public class ChatSuggestorGui {
         if (this.window != null && this.window.keyPressed(keyCode, scanCode, modifiers)) {
             return true;
         }
-        if (this.owner.getFocused() == this.textField && keyCode == KeyCodes.KEY_TAB) {
+        if (this.owner.getFocused() == this.textField && keyCode == InputConstants.KEY_TAB) {
             this.showSuggestions(true);
             return true;
         }
@@ -400,27 +399,27 @@ public class ChatSuggestorGui {
         }
 
         public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
-            if (keyCode == KeyCodes.KEY_UP) {
+            if (keyCode == InputConstants.KEY_UP) {
                 this.scroll(-1);
                 this.completed = false;
                 return true;
             }
-            if (keyCode == KeyCodes.KEY_DOWN) {
+            if (keyCode == InputConstants.KEY_DOWN) {
                 this.scroll(1);
                 this.completed = false;
                 return true;
             }
-            if (keyCode == KeyCodes.KEY_TAB) {
+            if (keyCode == InputConstants.KEY_TAB) {
                 if (this.completed) {
-                    boolean shift = InputConstants.isKeyDown(KeyCodes.KEY_LEFT_SHIFT)
-                            || InputConstants.isKeyDown(KeyCodes.KEY_RIGHT_SHIFT);
+                    boolean shift = InputConstants.isKeyDown(InputConstants.KEY_LSHIFT)
+                            || InputConstants.isKeyDown(InputConstants.KEY_RSHIFT);
                     this.scroll(shift ? -1 : 1);
                 }
 
                 this.complete();
                 return true;
             }
-            if (keyCode == KeyCodes.KEY_ESCAPE) {
+            if (keyCode == InputConstants.KEY_ESCAPE) {
                 this.discard();
                 return true;
             }
