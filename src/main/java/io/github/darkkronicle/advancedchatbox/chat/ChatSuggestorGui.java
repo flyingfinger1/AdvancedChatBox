@@ -287,10 +287,10 @@ public class ChatSuggestorGui {
             this.mouse = Vec2.ZERO;
             int renderX = x - 1;
             int renderY = ChatSuggestorGui.this.chatScreenSized
-                    ? y - 3 - Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 12
+                    ? y - 3 - Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 13
                     : y;
             this.area = new Rect2i(renderX, renderY, width + 1,
-                    Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 12);
+                    Math.min(list.size(), ChatSuggestorGui.this.maxSuggestionSize) * 13);
             this.typedText = ChatSuggestorGui.this.textField.getValue();
             this.lastNarrationIndex = narrateFirstSuggestion ? -1 : 0;
             this.suggestions = list;
@@ -344,11 +344,11 @@ public class ChatSuggestorGui {
 
             for (int s = 0; s < suggestionSize; ++s) {
                 AdvancedSuggestion suggestion = this.suggestions.get(s + this.inWindowIndex);
-                context.fill(this.area.getX(), this.area.getY() + 12 * s,
-                        this.area.getX() + this.area.getWidth(), this.area.getY() + 12 * s + 12,
+                context.fill(this.area.getX(), this.area.getY() + 13 * s,
+                        this.area.getX() + this.area.getWidth(), this.area.getY() + 13 * s + 13,
                         ChatBoxConfigStorage.General.BACKGROUND_COLOR.config.get().color());
                 if (mouseX > this.area.getX() && mouseX < this.area.getX() + this.area.getWidth()
-                        && mouseY > this.area.getY() + 12 * s && mouseY < this.area.getY() + 12 * s + 12) {
+                        && mouseY > this.area.getY() + 13 * s && mouseY < this.area.getY() + 13 * s + 13) {
                     if (updateMouse) {
                         this.select(s + this.inWindowIndex);
                     }
@@ -357,7 +357,7 @@ public class ChatSuggestorGui {
                 }
 
                 context.text(textRenderer, suggestion.getRender(),
-                        this.area.getX() + 1, this.area.getY() + 2 + 12 * s,
+                        this.area.getX() + 1, this.area.getY() + 2 + 13 * s,
                         (s + this.inWindowIndex) == this.selection
                                 ? ChatBoxConfigStorage.General.HIGHLIGHT_COLOR.config.get().color()
                                 : ChatBoxConfigStorage.General.UNHIGHLIGHT_COLOR.config.get().color(),
