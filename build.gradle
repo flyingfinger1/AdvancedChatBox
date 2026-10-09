@@ -39,10 +39,17 @@ dependencies {
     // Calculator suggestor
     implementation "org.mariuszgromada.math:MathParser.org-mXparser:${project.mxparser_version}"
 
-    // Spell-check (LanguageTool) and its full transitive set, bundled via include (jar-in-jar).
-    implementation "org.languagetool:language-en:5.5"
-    include "org.languagetool:language-en:5.5"
+    // Spell-check ENGINE only (LanguageTool core). The actual language data (English, German, ...) is
+    // large and lives in separate add-on mods (advancedchatbox-lang-*) that bundle their own
+    // language-XX artifact and register a SpellCheckLanguageProvider via the "advancedchatbox:spellcheck"
+    // entrypoint. Box compiles and runs against core only.
+    implementation "org.languagetool:languagetool-core:5.5"
     include "org.languagetool:languagetool-core:5.5"
+    // Hunspell spell-check backend (used by some languages, e.g. German; English uses morfologik). This
+    // is engine-level (part of languagetool-core's spelling support), so it lives in Box. Pulls the
+    // native BridJ binding (org.bridj.Pointer).
+    include "com.gitlab.dumonts:hunspell:1.1.1"
+    include "com.nativelibs4java:bridj:0.7.0"
     include group: 'net.loomchild', name: 'segment', version: '2.0.3'
     // segment's SRX parser needs Apache Commons Logging at runtime; not bundled before -> crash.
     implementation "commons-logging:commons-logging:1.2"
@@ -57,10 +64,9 @@ dependencies {
     include group: 'org.carrot2', name: 'morfologik-fsa-builders', version: '2.1.7'
     include group: 'org.carrot2', name: 'morfologik-speller', version: '2.1.7'
     include group: 'org.carrot2', name: 'morfologik-stemming', version: '2.1.7'
-    include group: 'org.apache.opennlp', name: 'opennlp-tools', version: '1.9.3'
-    include group: 'edu.washington.cs.knowitall', name: 'opennlp-chunk-models', version: '1.5'
-    include group: 'edu.washington.cs.knowitall', name: 'opennlp-postag-models', version: '1.5'
-    include group: 'edu.washington.cs.knowitall', name: 'opennlp-tokenize-models', version: '1.5'
+    // opennlp (English POS/chunk/tokenize models, ~9 MB) is English-specific — German uses its own
+    // morfologik tagger — so it lives in the English language add-on, not here. hppc stays (morfologik
+    // uses it).
     include group: 'com.carrotsearch', name: 'hppc', version: '0.9.0'
 
     compileOnly "org.projectlombok:lombok:${project.lombok_version}"
