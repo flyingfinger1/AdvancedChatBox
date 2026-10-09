@@ -27,9 +27,21 @@ The following are **required** for this mod to run:
 
 [Mod Menu](https://modrinth.com/mod/modmenu) is recommended to open the configuration screen.
 
+### Spell-check languages
+
+The spell-checker's **engine** ships with AdvancedChatBox, but each **language's data** is large and
+lives in its own small add-on mod. Install the add-on for the language(s) you want; the spell-checker
+picks the one matching your Minecraft language automatically:
+
+- [AdvancedChatBox Language: English](https://github.com/flyingfinger1/AdvancedChatBoxLangEN)
+- [AdvancedChatBox Language: German](https://github.com/flyingfinger1/AdvancedChatBoxLangDE)
+
+Without a language add-on installed, the rest of the mod works normally and spell-check is simply
+disabled. Add-ons require this version of AdvancedChatBox or newer.
+
 ## Features
 
-- Spelling Checker powered by [LanguageTool](https://languagetool.org)
+- Spelling Checker powered by [LanguageTool](https://languagetool.org) — see **Spell-check languages** below
 - In-Chat Calculator
 - Toggle player tab suggestions
 - Add custom chat suggestions in the form of shortcuts
@@ -51,8 +63,10 @@ AdvancedChatCore, which it resolves from your local Maven repository. Publish Co
 ./gradlew build
 ```
 
-The output jar in `build/libs/` bundles LanguageTool and its dependencies (jar-in-jar), so it is
-large (~20 MB). To run the mod, install it together with AdvancedChatCore, MaLiLib and Fabric API.
+The output jar in `build/libs/` bundles the LanguageTool **engine** (jar-in-jar) but not the
+per-language data, which lives in the separate language add-ons (see **Spell-check languages**), so
+it is ~8 MB. To run the mod, install it together with AdvancedChatCore, MaLiLib and Fabric API, plus
+a language add-on if you want spell-checking.
 
 ## Development
 

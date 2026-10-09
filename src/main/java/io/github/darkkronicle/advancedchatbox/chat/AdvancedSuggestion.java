@@ -29,18 +29,35 @@ public class AdvancedSuggestion extends Suggestion {
     private final Component render;
 
     /**
+     * Primary sort key for the dropdown. Lower comes first; equal priorities fall back to the usual
+     * alphabetical comparison. Normal suggestions all use 0 (so they stay alphabetical); spell-check
+     * sets it to the edit distance from the typed word, so the closest corrections surface at the top
+     * and survive both the {@link AdvancedSuggestions} and {@link ChatSuggestor} sorts.
+     */
+    @Getter
+    private final int sortPriority;
+
+    /**
      * @param range   Range from the original string where it is recommending
      * @param text    Suggested text to use
      * @param render  How the suggestion will render
      * @param tooltip Message to show up on hover
      */
     public AdvancedSuggestion(StringRange range, String text, Component render, Message tooltip) {
+        this(range, text, render, tooltip, 0);
+    }
+
+    /**
+     * @param sortPriority Primary sort key (lower first); see {@link #sortPriority}.
+     */
+    public AdvancedSuggestion(StringRange range, String text, Component render, Message tooltip, int sortPriority) {
         super(range, text, tooltip);
         if (render == null) {
             this.render = new RawText(text, Style.EMPTY);
         } else {
             this.render = render;
         }
+        this.sortPriority = sortPriority;
     }
 
     public AdvancedSuggestion(StringRange range, String text) {
@@ -49,16 +66,22 @@ public class AdvancedSuggestion extends Suggestion {
 
     @Override
     public int compareTo(final Suggestion o) {
-        if (o instanceof AdvancedSuggestion) {
-            return render.getString().compareTo(((AdvancedSuggestion) o).getRender().getString());
+        if (o instanceof AdvancedSuggestion other) {
+            if (sortPriority != other.sortPriority) {
+                return Integer.compare(sortPriority, other.sortPriority);
+            }
+            return render.getString().compareTo(other.getRender().getString());
         }
         return render.getString().compareTo(o.getText());
     }
 
     @Override
     public int compareToIgnoreCase(final Suggestion o) {
-        if (o instanceof AdvancedSuggestion) {
-            return render.getString().compareToIgnoreCase(((AdvancedSuggestion) o).getRender().getString());
+        if (o instanceof AdvancedSuggestion other) {
+            if (sortPriority != other.sortPriority) {
+                return Integer.compare(sortPriority, other.sortPriority);
+            }
+            return render.getString().compareToIgnoreCase(other.getRender().getString());
         }
         return render.getString().compareToIgnoreCase(o.getText());
     }
