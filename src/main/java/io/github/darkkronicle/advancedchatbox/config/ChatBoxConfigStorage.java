@@ -15,7 +15,9 @@ import fi.dy.masa.malilib.config.IConfigBase;
 import fi.dy.masa.malilib.config.IConfigHandler;
 import fi.dy.masa.malilib.config.options.ConfigBoolean;
 import fi.dy.masa.malilib.config.options.ConfigInteger;
+import fi.dy.masa.malilib.config.options.ConfigOptionList;
 import fi.dy.masa.malilib.config.options.ConfigString;
+import io.github.darkkronicle.advancedchatbox.suggester.SpellCheckLanguageOption;
 import fi.dy.masa.malilib.util.FileUtils;
 import fi.dy.masa.malilib.util.data.json.JsonUtils;
 import fi.dy.masa.malilib.util.StringUtils;
@@ -76,6 +78,14 @@ public class ChatBoxConfigStorage implements IConfigHandler {
             return StringUtils.translate("advancedchatbox.config.spellchecker." + key);
         }
 
+        /**
+         * Which installed spell-check language add-on to use. "Automatic" follows the Minecraft
+         * language; otherwise the chosen language is used. Only meaningful once a language add-on is
+         * installed, and most useful with more than one.
+         */
+        public static final SaveableConfig<ConfigOptionList> LANGUAGE = SaveableConfig.fromConfig("language",
+                new ConfigOptionList(translate("language"), SpellCheckLanguageOption.auto(), translate("info.language")));
+
         public static final SaveableConfig<ConfigString> HOVER_TEXT = SaveableConfig.fromConfig("hoverText",
                 new ConfigString(translate("hovertext"), "&7$1&b$2&7$3", translate("info.hovertext")));
 
@@ -90,9 +100,10 @@ public class ChatBoxConfigStorage implements IConfigHandler {
         // )
         // );
 
-        public static final ImmutableList<SaveableConfig<? extends IConfigBase>> OPTIONS = ImmutableList.of(HOVER_TEXT
+        public static final ImmutableList<SaveableConfig<? extends IConfigBase>> OPTIONS =
+                ImmutableList.of(LANGUAGE, HOVER_TEXT
                 // SUGGEST_CAPITAL
-        );
+                );
     }
 
     public static void loadFromFile() {

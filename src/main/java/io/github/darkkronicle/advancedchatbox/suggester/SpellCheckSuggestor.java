@@ -27,11 +27,18 @@ import org.languagetool.rules.RuleMatch;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Objects;
 import java.util.Optional;
 
 @Environment(EnvType.CLIENT)
 public class SpellCheckSuggestor implements IMessageSuggestor {
-    private final JLanguageTool lt;
+
+    /** The active engine, or null when no language is loaded (none installed / load failed). */
+    private JLanguageTool lt;
+    /** Provider code the engine was last built for; tracks the configured/auto selection. */
+    private String loadedCode;
+    /** Whether an initial load attempt has run (so we build once even when nothing is installed). */
+    private boolean loaded;
 
     private static final SpellCheckSuggestor INSTANCE = new SpellCheckSuggestor();
 
@@ -44,41 +51,55 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
         // limits on modern Java (Java 25 enforces jdk.xml.totalEntitySizeLimit=100000, which the
         // grammar slightly exceeds). These XML files ship inside the mod and are trusted, so lift
         // the limits before LanguageTool parses them. Without this, rule activation throws and the
-        // whole spell-check suggestor fails to load.
+        // whole spell-check suggestor fails to load. The engine itself is built lazily in
+        // ensureLoaded(), so switching the language in the config takes effect without a restart.
         System.setProperty("jdk.xml.totalEntitySizeLimit", "0");
         System.setProperty("jdk.xml.maxGeneralEntitySizeLimit", "0");
         System.setProperty("jdk.xml.entityExpansionLimit", "0");
+    }
 
-        // The language data (English, German, ...) lives in separate add-on mods that register a
-        // SpellCheckLanguageProvider; Box only ships the engine. Pick the one matching the game language.
-        JLanguageTool tool = null;
-        SpellCheckLanguageProvider provider = SpellCheckLanguages.pickForCurrentLocale();
-        if (provider != null) {
-            try {
-                Language language = provider.createLanguage();
-                // null motherTongue: this skips LanguageTool's false-friend rules, which require OTHER
-                // language modules to be registered (their handler hard-codes loading the "en-US"
-                // message bundle) and otherwise crash a single-language setup — e.g. German alone threw
-                // "'en-US' is not a language code known to LanguageTool". Chat spell-check doesn't need
-                // cross-language false-friend hints anyway.
-                tool = new JLanguageTool(language, null, new ResultCache(15),
-                        new UserConfig(new ArrayList<>(), new HashMap<>(), 20));
-                tool.setMaxErrorsPerWordRate(0.33f);
-                // Set it up. Make it so it doesn't freeze later.
-                tool.check("a");
-                AdvancedChatBox.LOGGER.info("Spell-check language: {} ({})", provider.displayName(), provider.code());
-            } catch (Exception e) {
-                AdvancedChatBox.LOGGER.error("Failed to initialise spell-check for language {}", provider.code(), e);
-                tool = null;
-            }
-        } else {
-            AdvancedChatBox.LOGGER.info("No spell-check language add-on installed; spell-check is disabled.");
+    /**
+     * Builds (or rebuilds) the engine to match the configured spell-check language. Cheap no-op when
+     * the selection has not changed; the expensive LanguageTool build only runs on the first call and
+     * whenever the user switches language (or the game language changes while on "Automatic").
+     */
+    private void ensureLoaded() {
+        String configCode = ChatBoxConfigStorage.SpellChecker.LANGUAGE.config.getOptionListValue().getStringValue();
+        SpellCheckLanguageProvider provider = SpellCheckLanguages.resolve(configCode);
+        String desired = provider == null ? null : provider.code();
+        if (loaded && Objects.equals(desired, loadedCode)) {
+            return;
         }
-        lt = tool;
+        loaded = true;
+        loadedCode = desired;
+        if (provider == null) {
+            lt = null;
+            AdvancedChatBox.LOGGER.info("No spell-check language add-on installed; spell-check is disabled.");
+            return;
+        }
+        try {
+            Language language = provider.createLanguage();
+            // null motherTongue: this skips LanguageTool's false-friend rules, which require OTHER
+            // language modules to be registered (their handler hard-codes loading the "en-US"
+            // message bundle) and otherwise crash a single-language setup — e.g. German alone threw
+            // "'en-US' is not a language code known to LanguageTool". Chat spell-check doesn't need
+            // cross-language false-friend hints anyway.
+            JLanguageTool tool = new JLanguageTool(language, null, new ResultCache(15),
+                    new UserConfig(new ArrayList<>(), new HashMap<>(), 20));
+            tool.setMaxErrorsPerWordRate(0.33f);
+            // Set it up. Make it so it doesn't freeze later.
+            tool.check("a");
+            lt = tool;
+            AdvancedChatBox.LOGGER.info("Spell-check language: {} ({})", provider.displayName(), provider.code());
+        } catch (Exception e) {
+            AdvancedChatBox.LOGGER.error("Failed to initialise spell-check for language {}", provider.code(), e);
+            lt = null;
+        }
     }
 
     @Override
     public Optional<List<AdvancedSuggestions>> suggest(String text) {
+        ensureLoaded();
         if (lt == null) {
             // No language add-on installed, or the engine failed to start.
             return Optional.empty();

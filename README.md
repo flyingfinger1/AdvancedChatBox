@@ -36,6 +36,10 @@ picks the one matching your Minecraft language automatically:
 - [AdvancedChatBox Language: English](https://github.com/flyingfinger1/AdvancedChatBoxLangEN)
 - [AdvancedChatBox Language: German](https://github.com/flyingfinger1/AdvancedChatBoxLangDE)
 
+By default the spell-checker follows your Minecraft language, but you can pick a specific language
+under **Spell Checker → Spell-check Language** in the config (handy when you have more than one
+language add-on installed). The change takes effect without a restart.
+
 Without a language add-on installed, the rest of the mod works normally and spell-check is simply
 disabled. Add-ons require this version of AdvancedChatBox or newer.
 

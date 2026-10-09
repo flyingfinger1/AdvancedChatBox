@@ -43,5 +43,8 @@
   "advancedchatbox.config.general.availablesuggestioncolor": "Farbe verfügbarer Vorschläge",
   "advancedchatbox.config.general.info.availablesuggestioncolor": "In welcher Farbe §6eigene Chat-Vorschläge§r erscheinen.",
   "advancedchatbox.config.spellchecker.hovertext": "Hover-Format der Rechtschreibprüfung",
+  "advancedchatbox.config.spellchecker.language": "Rechtschreib-Sprache",
+  "advancedchatbox.config.spellchecker.info.language": "Welches installierte Sprach-Add-on für die Rechtschreibprüfung genutzt wird.\n§bAutomatisch§r folgt deiner Minecraft-Sprache. Installiere ein §6AdvancedChatBox Language§r-Add-on, um hier eine Sprache hinzuzufügen.",
+  "advancedchatbox.config.spellchecker.language.auto": "Automatisch",
   "advancedchatbox.config.spellchecker.info.hovertext": "Das Format des Texts, der erscheint, wenn du mit der Maus über einen Korrekturvorschlag fährst.\n§b$1§r ist der erste Teil der Beschreibung bis zum Vorschlag.\n§b$2§r ist der eigentliche Rechtschreibvorschlag.\n§b$3§r sind zusätzliche Infos, die die Rechtschreibprüfung ggf. liefert."
 }
