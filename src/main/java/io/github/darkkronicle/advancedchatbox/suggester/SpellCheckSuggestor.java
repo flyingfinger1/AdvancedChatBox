@@ -19,12 +19,11 @@ import net.fabricmc.api.Environment;
 import net.minecraft.network.chat.Style;
 import net.minecraft.network.chat.Component;
 import org.languagetool.JLanguageTool;
+import org.languagetool.Language;
 import org.languagetool.ResultCache;
 import org.languagetool.UserConfig;
-import org.languagetool.language.AmericanEnglish;
 import org.languagetool.rules.RuleMatch;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -50,19 +49,40 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
         System.setProperty("jdk.xml.maxGeneralEntitySizeLimit", "0");
         System.setProperty("jdk.xml.entityExpansionLimit", "0");
 
-        lt = new JLanguageTool(new AmericanEnglish(), new AmericanEnglish(), new ResultCache(15),
-                new UserConfig(new ArrayList<>(), new HashMap<>(), 20));
-        lt.setMaxErrorsPerWordRate(0.33f);
-        try {
-            // Set it up. Make it so it doesn't freeze later.
-            lt.check("a");
-        } catch (IOException e) {
-            AdvancedChatBox.LOGGER.error("Failed to warm up the spell-check suggestor", e);
+        // The language data (English, German, ...) lives in separate add-on mods that register a
+        // SpellCheckLanguageProvider; Box only ships the engine. Pick the one matching the game language.
+        JLanguageTool tool = null;
+        SpellCheckLanguageProvider provider = SpellCheckLanguages.pickForCurrentLocale();
+        if (provider != null) {
+            try {
+                Language language = provider.createLanguage();
+                // null motherTongue: this skips LanguageTool's false-friend rules, which require OTHER
+                // language modules to be registered (their handler hard-codes loading the "en-US"
+                // message bundle) and otherwise crash a single-language setup — e.g. German alone threw
+                // "'en-US' is not a language code known to LanguageTool". Chat spell-check doesn't need
+                // cross-language false-friend hints anyway.
+                tool = new JLanguageTool(language, null, new ResultCache(15),
+                        new UserConfig(new ArrayList<>(), new HashMap<>(), 20));
+                tool.setMaxErrorsPerWordRate(0.33f);
+                // Set it up. Make it so it doesn't freeze later.
+                tool.check("a");
+                AdvancedChatBox.LOGGER.info("Spell-check language: {} ({})", provider.displayName(), provider.code());
+            } catch (Exception e) {
+                AdvancedChatBox.LOGGER.error("Failed to initialise spell-check for language {}", provider.code(), e);
+                tool = null;
+            }
+        } else {
+            AdvancedChatBox.LOGGER.info("No spell-check language add-on installed; spell-check is disabled.");
         }
+        lt = tool;
     }
 
     @Override
     public Optional<List<AdvancedSuggestions>> suggest(String text) {
+        if (lt == null) {
+            // No language add-on installed, or the engine failed to start.
+            return Optional.empty();
+        }
         ArrayList<AdvancedSuggestions> suggestions = new ArrayList<>();
         try {
             List<RuleMatch> matches = lt.check(text);
@@ -70,7 +90,8 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
                 int fromPos = match.getFromPos();
                 int toPos = match.getToPos();
                 StringRange range = new StringRange(fromPos, toPos);
-                suggestions.add(new AdvancedSuggestions(range, convertSuggestions(match, range)));
+                String original = text.substring(fromPos, toPos);
+                suggestions.add(new AdvancedSuggestions(range, convertSuggestions(match, range, original)));
             }
         } catch (Exception e) {
             AdvancedChatBox.LOGGER.error("Failed to run spell check on text", e);
@@ -79,13 +100,41 @@ public class SpellCheckSuggestor implements IMessageSuggestor {
         return Optional.of(suggestions);
     }
 
-    private static List<AdvancedSuggestion> convertSuggestions(RuleMatch match, StringRange range) {
+    private static List<AdvancedSuggestion> convertSuggestions(RuleMatch match, StringRange range, String original) {
+        // Rank LanguageTool's replacements by edit distance to the typed word (closest first), so the
+        // most likely correction surfaces at the top of the dropdown and survives the display limit.
+        // The distance is passed as the suggestion's sort priority, which is the PRIMARY key in
+        // AdvancedSuggestion.compareTo; this way the ordering survives both the alphabetical sort in the
+        // AdvancedSuggestions constructor and the one in ChatSuggestor.orderSuggestions. Equal distances
+        // fall back to alphabetical.
+        String originalLower = original.toLowerCase();
         List<AdvancedSuggestion> replacements = new ArrayList<>();
         for (String s : match.getSuggestedReplacements()) {
-            replacements
-                    .add(new AdvancedSuggestion(range, s, new RawText(s, Style.EMPTY), getHover(match.getMessage())));
+            int distance = levenshtein(originalLower, s.toLowerCase());
+            replacements.add(new AdvancedSuggestion(range, s, new RawText(s, Style.EMPTY),
+                    getHover(match.getMessage()), distance));
         }
         return replacements;
+    }
+
+    /** Levenshtein edit distance between two strings. */
+    private static int levenshtein(String a, String b) {
+        int[] prev = new int[b.length() + 1];
+        int[] curr = new int[b.length() + 1];
+        for (int j = 0; j <= b.length(); j++) {
+            prev[j] = j;
+        }
+        for (int i = 1; i <= a.length(); i++) {
+            curr[0] = i;
+            for (int j = 1; j <= b.length(); j++) {
+                int cost = a.charAt(i - 1) == b.charAt(j - 1) ? 0 : 1;
+                curr[j] = Math.min(Math.min(curr[j - 1] + 1, prev[j] + 1), prev[j - 1] + cost);
+            }
+            int[] tmp = prev;
+            prev = curr;
+            curr = tmp;
+        }
+        return prev[b.length()];
     }
 
     private static Component getHover(String message) {

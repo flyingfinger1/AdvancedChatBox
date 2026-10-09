@@ -256,8 +256,11 @@ public class ChatSuggestor {
                 if (Collections.frequency(names.values(), entry.getValue()) >= 2) {
                     newSuggestions.add(entry.getKey());
                 } else {
+                    // Carry the sort priority over, otherwise spell-check's distance ordering is lost here
+                    // (this rebuild runs when REMOVE_IDENTIFIER is on, which is the default).
                     newSuggestions.add(new AdvancedSuggestion(entry.getKey().getRange(), entry.getValue(),
-                            entry.getKey().getRender(), entry.getKey().getTooltip()));
+                            entry.getKey().getRender(), entry.getKey().getTooltip(),
+                            entry.getKey().getSortPriority()));
                 }
             }
         } else {
