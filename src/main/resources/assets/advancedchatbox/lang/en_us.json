@@ -43,5 +43,8 @@
   "advancedchatbox.config.general.availablesuggestioncolor": "Available Suggestion Color",
   "advancedchatbox.config.general.info.availablesuggestioncolor": "What color §6custom chat suggestors§r will show up as",
   "advancedchatbox.config.spellchecker.hovertext": "Spell Checker Hover Format",
+  "advancedchatbox.config.spellchecker.language": "Spell-check Language",
+  "advancedchatbox.config.spellchecker.info.language": "Which installed language add-on to use for spell-checking.\n§bAutomatic§r follows your Minecraft language. Install an §6AdvancedChatBox Language§r add-on to add a language here.",
+  "advancedchatbox.config.spellchecker.language.auto": "Automatic",
   "advancedchatbox.config.spellchecker.info.hovertext": "The format of the text that appears when you hover your mouse over a suggested spelling change\n§b$1§r is the first part of the description, up to the suggested change\n§b$2§r is the actual spelling suggestion\n§b$3§r is any additional information that the spell checker may provide"
 }

@@ -76,4 +76,22 @@ public final class SpellCheckLanguages {
         }
         return provs.get(0);
     }
+
+    /**
+     * Resolves the configured spell-check language. {@code "auto"} (also null/empty/unknown) picks by
+     * the current game language via {@link #pickForCurrentLocale()}; any other value selects the
+     * installed provider whose {@link SpellCheckLanguageProvider#code()} matches, falling back to auto
+     * if that language add-on is not installed.
+     */
+    public static SpellCheckLanguageProvider resolve(String configCode) {
+        if (configCode == null || configCode.isEmpty() || configCode.equalsIgnoreCase("auto")) {
+            return pickForCurrentLocale();
+        }
+        for (SpellCheckLanguageProvider p : getProviders()) {
+            if (configCode.equalsIgnoreCase(p.code())) {
+                return p;
+            }
+        }
+        return pickForCurrentLocale();
+    }
 }
