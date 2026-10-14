@@ -67,6 +67,14 @@ public class ChatSuggestorGui {
     private boolean windowActive;
     private boolean completingSuggestions;
 
+    // When Tab is pressed before the (async) command-suggestion future has resolved, remember the request
+    // and open the window as soon as it is ready — checked each frame in render(), on the main thread.
+    // Without this the Tab was silently dropped whenever the future (often a server round-trip for
+    // argument completions like "/msg <name>") was not yet done, so the suggestion box needed 2-3 Tab
+    // presses until the future happened to have completed in between.
+    private boolean showWhenReady;
+    private boolean showWhenReadyNarrate;
+
     private final ChatFormatter formatter;
     private final ChatSuggestor suggestor;
 
@@ -91,6 +99,9 @@ public class ChatSuggestorGui {
         this.windowActive = windowActive;
         if (!windowActive) {
             this.window = null;
+            // The field was reset (chat closed, history navigation, text back to original) — drop any
+            // Tab request that was still waiting for a future so it can't pop a stale window open later.
+            this.showWhenReady = false;
         }
     }
 
@@ -115,6 +126,10 @@ public class ChatSuggestorGui {
 
     public void showSuggestions(boolean narrateFirstSuggestion) {
         if (!suggestor.isDone()) {
+            // Suggestions (e.g. server-provided argument completions) are still being computed. Don't
+            // drop this request — remember it and open the window from render() once the future resolves.
+            this.showWhenReady = true;
+            this.showWhenReadyNarrate = narrateFirstSuggestion;
             return;
         }
         List<AdvancedSuggestion> suggestions = suggestor.getSuggestions();
@@ -250,6 +265,13 @@ public class ChatSuggestorGui {
     }
 
     public void render(GuiGraphicsExtractor context, int mouseX, int mouseY) {
+        // A Tab press that arrived before its suggestion future was ready left this flag set; now that the
+        // future has resolved, open the window (one-shot, on the main thread). This is what stops the box
+        // from needing 2-3 Tab presses when the completions aren't computed instantly.
+        if (this.showWhenReady && this.suggestor.isDone()) {
+            this.showWhenReady = false;
+            this.showSuggestions(this.showWhenReadyNarrate);
+        }
         if (this.window != null) {
             this.window.render(context, mouseX, mouseY);
         } else {
