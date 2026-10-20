@@ -398,7 +398,10 @@ public class ChatSuggestorGui {
             if (!this.area.contains(x, y)) {
                 return false;
             }
-            int i = (y - this.area.getY()) / 12 + this.inWindowIndex;
+            // Entries are 13px tall (see the render loop and the hover hit-test, which both use 13). This
+            // click-to-index math was left at 12 when the row spacing was tightened to 13, so the index
+            // drifted and clicking an entry — especially its lower part — selected the one below it.
+            int i = (y - this.area.getY()) / 13 + this.inWindowIndex;
             if (i >= 0 && i < this.suggestions.size()) {
                 this.select(i);
                 this.complete();
